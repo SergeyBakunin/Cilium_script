@@ -17,7 +17,7 @@ const yaml = require('js-yaml');
 
 // ---- Загрузка базовых политик из default.yaml ----
 const defaultYamlPath = path.join(__dirname, 'default.yaml');
-if (!fs.existsSync(defaultYamlPath)) throw new Error('Не найден default.yaml в директории скрипта');
+if (!fs.existsSync(defaultYamlPath)) throw new Error('❌ Не найден default.yaml в директории скрипта');
 const defaultDocs = yaml.loadAll(fs.readFileSync(defaultYamlPath, 'utf8'));
 // Упрощённая конфигурация для проверки наличия базовых
 const DEFAULT_RULES = defaultDocs.flatMap(doc => {
@@ -62,9 +62,9 @@ const makeRule = e => {
 function parseExcel(file) {
   const wb = XLSX.readFile(file);
   const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, blankrows:false });
-  if (!rows[1]||!rows[1][0]) throw new Error("Не найден 'namespace:' во второй строке");
+  if (!rows[1]||!rows[1][0]) throw new Error("❌ Не найден 'namespace:' во второй строке");
   const nsRaw = String(rows[1][0]).trim();
-  if (!nsRaw.includes(':')) throw new Error("Неверный формат namespace");
+  if (!nsRaw.includes(':')) throw new Error("❌ Неверный формат namespace");
   const namespace = nsRaw.split(':').slice(1).join(':').trim();
 
   const groups = {};
@@ -88,10 +88,10 @@ function parseExcel(file) {
 
 function validate(entries){
   const bad = entries.filter(e => /[А-Яа-яЁё]/.test(e.source+e.destination+e.protocol+e.direction+e.port));
-  if (bad.length) { console.error('Недопустимые символы на строках: '+bad.map(e=>e.rowNum).join(', ')); process.exit(1); }
+  if (bad.length) { console.error('❌ Недопустимые символы на строках: '+bad.map(e=>e.rowNum).join(', ')); process.exit(1); }
   const seen = {}, dups = [];
   entries.forEach(e=>{ const k=[e.direction,e.source,e.destination,e.port,(e.protocol||'ANY').toUpperCase()].join('|'); if(seen[k]) dups.push({first:seen[k],dup:e.rowNum}); else seen[k]=e.rowNum; });
-  if(dups.length){ console.warn('Найден дубликат:'); dups.forEach(d=>console.warn(`строки ${d.first} и ${d.dup}`)); }
+  if(dups.length){ console.warn('⚠️ Найден дубликат:'); dups.forEach(d=>console.warn(`строки ${d.first} и ${d.dup}`)); }
 }
 
 // ---- Сборка политик ----
@@ -114,7 +114,7 @@ function main(){
   validate(entries);
 
   const hasAll = DEFAULT_RULES.every(cfg=> entries.some(e=> e.direction===cfg.direction && e.port===cfg.port && (cfg.protocol==='ANY'|| e.protocol.toUpperCase()===cfg.protocol)));
-  console.log(hasAll ? 'Базовые политики из Excel, переименованы и добавлены из default.yaml' : 'Базовые политики отсутствуют в Excel, добавлены из default.yaml');
+  console.log(hasAll ? '⚠️ Базовые политики из Excel переименованы и добавлены из default.yaml' : '⚠️ Базовые политики отсутствуют в Excel, добавлены из default.yaml');
 
   // Подменяем metadata для дефолтных политик
   const defaultPolicies = defaultDocs.map(doc => {
@@ -136,10 +136,10 @@ function main(){
     .map(p=> yaml.dump(p,{ sortKeys:false,noRefs:true,indent:2,lineWidth:-1 }));
 
   const out = `${namespace}.yaml`;
-  const writeFile = ()=>{ fs.writeFileSync(out, docs.join('---\n'),'utf8'); console.log(`Файл создан: ${out}`); };
+  const writeFile = ()=>{ fs.writeFileSync(out, docs.join('---\n'),'utf8'); console.log(`✅ Файл создан: ${out}`); };
   if(fs.existsSync(out)){
     readline.createInterface({input:process.stdin,output:process.stdout})
-      .question(`Файл ${out} уже существует. Перезаписать? (y/n): `,ans=>{ if(ans.toLowerCase().startsWith('y')) writeFile(); else console.log('Отменено.'); process.exit(0); });
+      .question(`⚠️ Файл ${out} уже существует. Перезаписать? (y/n): `,ans=>{ if(ans.toLowerCase().startsWith('y')) writeFile(); else console.log('❌ Отменено.'); process.exit(0); });
   } else writeFile();
 }
 if(require.main===module) main();
